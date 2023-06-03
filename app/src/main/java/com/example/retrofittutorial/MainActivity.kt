@@ -2,9 +2,10 @@ package com.example.retrofittutorial
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.Button
-import android.widget.TextView
-import com.example.retrofittutorial.retrofit.ProductApi
+import com.example.retrofittutorial.databinding.ActivityMainBinding
+import com.example.retrofittutorial.retrofit.AuthRequest
+import com.example.retrofittutorial.retrofit.MainApi
+import com.squareup.picasso.Picasso
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -12,14 +13,13 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.create
 
 class MainActivity : AppCompatActivity() {
+    lateinit var binding: ActivityMainBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        val tv = findViewById<TextView>(R.id.tv)
-        val b = findViewById<Button>(R.id.button)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         val interceptor = HttpLoggingInterceptor()
         interceptor.level = HttpLoggingInterceptor.Level.BODY
@@ -34,14 +34,25 @@ class MainActivity : AppCompatActivity() {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
-        val productApi = retrofit.create(ProductApi::class.java)
+        val mainApi = retrofit.create(MainApi::class.java)
 
-        b.setOnClickListener {
+        binding.button.setOnClickListener {
             CoroutineScope(Dispatchers.IO).launch {
-                val product = productApi.getProductById(3)
+                    val user = mainApi.auth(
+                        AuthRequest(
+                            binding.username.text.toString(),
+                            binding.password.text.toString()
+                        )
+                    )
+
                 runOnUiThread {
-                    tv.text = product.title
+                    binding.apply {
+                        Picasso.get().load(user.image).into(imageView)
+                        firstName.text = user.firstName
+                        lastName.text = user.lastName
+                    }
                 }
+
             }
         }
     }
