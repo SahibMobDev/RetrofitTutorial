@@ -2,10 +2,10 @@ package com.example.retrofittutorial
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.retrofittutorial.adapter.ProductAdapter
 import com.example.retrofittutorial.databinding.ActivityMainBinding
-import com.example.retrofittutorial.retrofit.AuthRequest
 import com.example.retrofittutorial.retrofit.MainApi
-import com.squareup.picasso.Picasso
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -16,10 +16,15 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : AppCompatActivity() {
     lateinit var binding: ActivityMainBinding
+    lateinit var adapter: ProductAdapter
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        adapter = ProductAdapter()
+        binding.rcView.layoutManager = LinearLayoutManager(this,LinearLayoutManager.VERTICAL, false)
+        binding.rcView.adapter = adapter
 
         val interceptor = HttpLoggingInterceptor()
         interceptor.level = HttpLoggingInterceptor.Level.BODY
@@ -36,24 +41,15 @@ class MainActivity : AppCompatActivity() {
 
         val mainApi = retrofit.create(MainApi::class.java)
 
-        binding.button.setOnClickListener {
             CoroutineScope(Dispatchers.IO).launch {
-                    val user = mainApi.auth(
-                        AuthRequest(
-                            binding.username.text.toString(),
-                            binding.password.text.toString()
-                        )
-                    )
+                val list = mainApi.getAllProducts()
 
                 runOnUiThread {
                     binding.apply {
-                        Picasso.get().load(user.image).into(imageView)
-                        firstName.text = user.firstName
-                        lastName.text = user.lastName
+                        adapter.submitList(list.products)
                     }
                 }
 
             }
-        }
     }
 }
