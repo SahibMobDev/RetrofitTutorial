@@ -6,7 +6,9 @@ import android.widget.SearchView.OnQueryTextListener
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.retrofittutorial.adapter.ProductAdapter
 import com.example.retrofittutorial.databinding.ActivityMainBinding
+import com.example.retrofittutorial.retrofit.AuthRequest
 import com.example.retrofittutorial.retrofit.MainApi
+import com.example.retrofittutorial.retrofit.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,11 +42,25 @@ class MainActivity : AppCompatActivity() {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         val mainApi = retrofit.create(MainApi::class.java)
+        
+        var user: User? = null
+
+        CoroutineScope(Dispatchers.IO).launch {
+            user = mainApi.auth(
+                AuthRequest(
+                    "kminchelle",
+                    "0lelplR"
+                )
+            )
+
+            supportActionBar?.title = user?.firstName
+        }
+
 
         binding.sv.setOnQueryTextListener(object : OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 CoroutineScope(Dispatchers.IO).launch {
-                    val list = query?.let { mainApi.getProductsByName(it) }
+                    val list = query?.let { mainApi.getAuthProductsByName(user?.token ?: "",it) }
                     runOnUiThread {
                         binding.apply {
                             adapter.submitList(list?.products)
