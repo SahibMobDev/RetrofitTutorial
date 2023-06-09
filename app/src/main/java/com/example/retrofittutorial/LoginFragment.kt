@@ -8,10 +8,22 @@ import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.example.retrofittutorial.databinding.FragmentLoginBinding
+import com.example.retrofittutorial.retrofit.AuthRequest
+import com.example.retrofittutorial.retrofit.MainApi
+import com.google.gson.JsonObject
+import com.squareup.picasso.Picasso
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import org.json.JSONObject
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 
 class LoginFragment : Fragment() {
-
+    private lateinit var mainApi: MainApi
     private lateinit var binding: FragmentLoginBinding
     private val viewModel: LoginViewModel by activityViewModels()
 
@@ -27,10 +39,58 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        initRetrofit()
         binding.bNext.setOnClickListener {
             findNavController().navigate(R.id.action_loginFragment_to_productsFragment)
-            viewModel.token.value = "asdfasdfasdfasdf"
         }
+
+        binding.bSignIn.setOnClickListener {
+            auth(
+                AuthRequest(
+                    binding.login.text.toString(),
+                    binding.password.text.toString()
+                )
+            )
+        }
+    }
+
+    fun auth(authRequest: AuthRequest) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val response = mainApi.auth(authRequest)
+            val message = response.errorBody()?.string().let {
+                if (it != null) {
+                    JSONObject(it).getString("message")
+                }
+            }
+            requireActivity().runOnUiThread {
+                binding.error.text = message.toString()
+                val user = response.body()
+                if (user != null) {
+                    Picasso.get().load(user.image).into(binding.imageView)
+                    binding.name.text = user.firstName
+                    binding.bNext.visibility = View.VISIBLE
+                    viewModel.token.value = user.token
+                }
+            }
+
+        }
+    }
+
+
+    fun initRetrofit() {
+        val interceptor = HttpLoggingInterceptor()
+        interceptor.level = HttpLoggingInterceptor.Level.BODY
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor(interceptor)
+            .build()
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://dummyjson.com")
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(client)
+            .build()
+
+        mainApi = retrofit.create(MainApi::class.java)
     }
 }
